@@ -79,6 +79,10 @@ img { max-width: 100%; display: block; }
   background: var(--wood-deep);
   color: var(--rice-white);
 }
+.btn-icon {
+  flex-shrink: 0;
+  margin-right: 0.5em;
+}
 
 /* ---------- 顶部导航 ---------- */
 .site-header {
