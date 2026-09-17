@@ -18,9 +18,16 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // 预约表单：基础校验与提交反馈（当前为静态演示，未连接后端）
+  // 预约表单：校验通过后，将预约信息整理成短信，一键发送到店内预约号码
   var form = document.getElementById("bookingForm");
   var tip = document.getElementById("formTip");
+  var RESTAURANT_PHONE = "15949046027";
+  var typeLabels = {
+    business: "商务宴请",
+    birthday: "生日寿宴",
+    family: "家宴小聚",
+    tea: "茶叙 / 其他"
+  };
 
   if (form && tip) {
     form.addEventListener("submit", function (e) {
@@ -41,9 +48,27 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
+      var date = form.date.value;
+      var time = form.time.value;
+      var guests = form.guests.value;
+      var type = typeLabels[form.type.value] || form.type.value;
+      var note = form.note.value.trim();
+
+      var lines = [
+        "【苏公瓦舍·荷园茶宴 预约】",
+        "姓名：" + name,
+        "电话：" + phone,
+        "到店：" + date + " " + time,
+        "人数：" + guests + "人",
+        "类型：" + type
+      ];
+      if (note) lines.push("备注：" + note);
+
+      var body = lines.join("\n");
       tip.style.color = "";
-      tip.textContent = "预约信息已提交，我们将尽快致电与您确认，感谢您的信任。";
-      form.reset();
+      tip.textContent = "已为您打开短信，请确认发送，我们收到后会尽快回电确认。";
+
+      window.location.href = "sms:" + RESTAURANT_PHONE + "?body=" + encodeURIComponent(body);
     });
   }
 });
