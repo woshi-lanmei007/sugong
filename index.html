@@ -187,51 +187,17 @@
         </div>
       </div>
 
-      <form class="booking-form" id="bookingForm">
+      <div class="booking-form">
         <h3>在线预约</h3>
-        <p class="form-hint">填写后点击提交，将自动打开短信发送至店内预约号码</p>
-        <div class="form-row">
-          <label>
-            <span>姓名</span>
-            <input type="text" name="name" placeholder="您的称呼" required>
-          </label>
-          <label>
-            <span>联系电话</span>
-            <input type="tel" name="phone" placeholder="方便联系的号码" required>
-          </label>
-        </div>
-        <div class="form-row">
-          <label>
-            <span>到店日期</span>
-            <input type="date" name="date" required>
-          </label>
-          <label>
-            <span>到店时间</span>
-            <input type="time" name="time" required>
-          </label>
-        </div>
-        <div class="form-row">
-          <label>
-            <span>用餐人数</span>
-            <input type="number" name="guests" min="1" placeholder="例如 8" required>
-          </label>
-          <label>
-            <span>宴请类型</span>
-            <select name="type">
-              <option value="business">商务宴请</option>
-              <option value="birthday">生日寿宴</option>
-              <option value="family">家宴小聚</option>
-              <option value="tea">茶叙 / 其他</option>
-            </select>
-          </label>
-        </div>
-        <label class="form-full">
-          <span>备注（口味偏好 / 包厢需求等）</span>
-          <textarea name="note" rows="3" placeholder="如有忌口、包厢等特殊需求，请在此说明"></textarea>
-        </label>
-        <button type="submit" class="btn btn-primary form-submit">提交预约</button>
-        <p class="form-tip" id="formTip"></p>
-      </form>
+        <p class="form-hint">点击下方按钮填写预约登记表，姓名、电话、到店时间等信息会直接汇总给店内，方便核实与安排包厢</p>
+        <a
+          href="https://docs.qq.com/form/page/DUGpxZHJ6dmNFTVpC"
+          class="btn btn-primary form-submit"
+          target="_blank"
+          rel="noopener"
+        >填写预约登记表</a>
+        <p class="form-hint form-hint-alt">赶时间的话也可以直接<a href="tel:15949046027">一键拨号</a>预约</p>
+      </div>
     </div>
   </div>
 </section>
