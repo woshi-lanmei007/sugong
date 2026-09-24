@@ -80,7 +80,7 @@ tr.next td{background:var(--soft)}
 
 <div class="wrap" id="wrap">
   <header>
-    <span class="example" id="exampleTag">示例数据，改成你自己的即可</span>
+    <span class="example" id="exampleTag">已填入你截图里的 MSFT 持仓，下跌买入的资金是示例</span>
     <h1>阶梯止盈加仓表</h1>
     <p class="lede">涨到哪一档卖多少，跌到哪一档买多少。填好基准价和每一档比例，下面的表会算出每档的触发价、股数和盈亏。股数按<span id="lotText"></span>向下取整。</p>
   </header>
@@ -92,6 +92,9 @@ tr.next td{background:var(--soft)}
     <div class="seg"><span>涨跌颜色</span><div class="tabs">
       <button class="tab" id="clr-us" data-clr="us" aria-pressed="true">绿涨红跌</button>
       <button class="tab" id="clr-cn" data-clr="cn" aria-pressed="false">红涨绿跌</button></div></div>
+    <div class="seg" id="fracSeg"><span>股数</span><div class="tabs">
+      <button class="tab" id="frac-on" data-frac="1" aria-pressed="true">碎股</button>
+      <button class="tab" id="frac-off" data-frac="0" aria-pressed="false">整股</button></div></div>
   </div>
 
   <div class="tabs" role="tablist">
@@ -165,13 +168,16 @@ tr.next td{background:var(--soft)}
 <script>
 (function(){
   const DEF = {
-    opt:{mkt:'us',clr:'us'},
-    sell:{base:100,shares:100,now:'',rungs:[[10,10],[20,15],[30,15],[50,20],[70,20],[100,null]]},
-    buy:{base:100,cap:10000,now:'',rungs:[[0,30],[10,20],[20,25],[30,25]]}
+    opt:{mkt:'us',clr:'us',frac:true},
+    sell:{base:422.44,shares:0.40874177,now:498.07,rungs:[[10,10],[20,15],[30,15],[50,20],[70,20],[100,null]]},
+    buy:{base:498.07,cap:1000,now:'',rungs:[[0,30],[10,20],[20,25],[30,25]]}
   };
-  const KEY='ladder-v2';
+  const KEY='ladder-v3';
   const MKT={us:{cur:'美元',sym:'$',lot:1,lotText:'整股（1 股）'},cn:{cur:'元',sym:'¥',lot:100,lotText:' A 股一手 100 股'}};
+  const frac=()=>st.opt.mkt==='us'&&st.opt.frac;
   const lot=()=>MKT[st.opt.mkt].lot;
+  const fl=x=>frac()?Math.floor(x*1e6+1e-9)/1e6:Math.floor(x/lot()+1e-9)*lot();
+  const shf=n=>frac()?n.toLocaleString('zh-CN',{maximumFractionDigits:6}):Math.round(n).toLocaleString('zh-CN');
   let st, buyAvg=0, buySh=0;
   try{ st=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
   if(!st||!st.sell||!st.buy||!st.opt) st=JSON.parse(JSON.stringify(DEF));
@@ -209,7 +215,7 @@ tr.next td{background:var(--soft)}
   }
 
   function calcSell(){
-    const s=st.sell, base=num(s.base), N=Math.floor(num(s.shares)), now=num(s.now);
+    const s=st.sell, base=num(s.base), N=frac()?num(s.shares):Math.floor(num(s.shares)), now=num(s.now);
     const rows=s.rungs.map((r,i)=>({up:num(r[0]),ratio:r[1]==null?null:num(r[1]),i})).sort((a,b)=>a.up-b.up);
     // 最后一档（涨幅最高）卖出剩余全部
     let remain=N, cum=0, profit=0, zeroAt=null, msgs=[];
@@ -220,8 +226,8 @@ tr.next td{background:var(--soft)}
       const price=base*(1+r.up/100);
       let sh;
       if(last) sh=remain;
-      else { ratioSum+=r.ratio||0; sh=Math.min(remain,Math.floor(N*(r.ratio||0)/100/lot())*lot()); }
-      remain-=sh;
+      else { ratioSum+=r.ratio||0; sh=Math.min(remain,fl(N*(r.ratio||0)/100)); }
+      remain=Math.max(0,+(remain-sh).toFixed(8));
       const proceeds=sh*price, p=sh*(price-base);
       cum+=proceeds; profit+=p;
       const effCost=remain>0?(totalCost-cum)/remain:null;
@@ -231,7 +237,8 @@ tr.next td{background:var(--soft)}
     if(ratioSum>=100) msgs.push('前几档卖出比例合计已达 '+ratioSum+'%，最后一档已经没有可卖的股票。');
     if(lot()>1&&N%lot()!==0) msgs.push('持股数不是 100 的整数倍，零股会在最后一档一起卖出。');
     const tiny=out.find(o=>!o.last&&o.ratio>0&&o.sh===0);
-    if(tiny) msgs.push('有档位按比例算不够'+(lot()>1?'一手（100 股）':' 1 股')+'，这档卖 0 股。持股较少时可以减少档数。');
+    if(tiny) msgs.push('有档位按比例算不够'+(lot()>1?'一手（100 股）':' 1 股')+'，这档卖 0 股。'+(st.opt.mkt==='us'?'券商支持碎股的话，把上面的“股数”切到碎股。':'持股较少时可以减少档数。'));
+    if(frac()&&out.some(o=>o.sh>0&&o.proceeds<1)) msgs.push('有档位的卖出金额不到 $1。不少券商每笔碎股交易最少 $1，这种情况可以减少档数。');
 
     // 当前价标记
     let nextIdx=-1;
@@ -244,8 +251,8 @@ tr.next td{background:var(--soft)}
       return `<tr class="${done?'done':''} ${next?'next':''}">
         <td class="lvl">${o.last?'清仓':'第 '+(o.k+1)+' 档'}${tag}</td>
         <td>${pct(o.up)}</td><td class="price">${p2(o.price)}</td>
-        <td>${int(o.sh)}${o.last?'':'<span class="note"> ('+o.ratio+'%)</span>'}</td>
-        <td>${money(o.proceeds)}</td><td>${money(o.p)}</td><td>${int(o.remain)}</td><td>${eff}</td></tr>`;
+        <td>${shf(o.sh)}${o.last?'':'<span class="note"> ('+o.ratio+'%)</span>'}</td>
+        <td>${money(o.proceeds)}</td><td>${money(o.p)}</td><td>${shf(o.remain)}</td><td>${eff}</td></tr>`;
     }).join('');
     const avg=N>0?cum/N:0;
     $('s-sum').innerHTML=
@@ -265,7 +272,7 @@ tr.next td{background:var(--soft)}
     const out=rows.map((r,k)=>{
       sum+=r.ratio;
       const price=base*(1-r.dn/100);
-      const sh=price>0?Math.floor(M*r.ratio/100/price/lot())*lot():0;
+      const sh=price>0?fl(M*r.ratio/100/price):0;
       const cost=sh*price;
       cumSh+=sh; cumCost+=cost;
       const avg=cumSh>0?cumCost/cumSh:0;
@@ -285,15 +292,15 @@ tr.next td{background:var(--soft)}
       return `<tr class="${done?'done':''} ${next?'next':''}">
         <td class="lvl">${o.dn===0?'首次建仓':'第 '+(o.k+1)+' 档'}${tag}</td>
         <td>${o.dn===0?'0%':pct(-o.dn)}</td><td class="price">${p2(o.price)}</td>
-        <td>${int(o.sh)}<span class="note"> (${o.ratio}%)</span></td>
-        <td>${money(o.cost)}</td><td>${int(o.cumSh)}</td><td>${o.avg?p2(o.avg):'—'}</td><td>${o.need?pct(o.need):'—'}</td></tr>`;
+        <td>${shf(o.sh)}<span class="note"> (${o.ratio}%)</span></td>
+        <td>${money(o.cost)}</td><td>${shf(o.cumSh)}</td><td>${o.avg?p2(o.avg):'—'}</td><td>${o.need?pct(o.need):'—'}</td></tr>`;
     }).join('');
     const lastP=out.length?out[out.length-1].price:0;
     const avg=cumSh>0?cumCost/cumSh:0;
     const loss10=cumSh*(lastP*0.9-avg);
     $('b-sum').innerHTML=
       stat('满仓后持仓均价',avg?p2(avg):'—','')+
-      stat('满仓股数',int(cumSh),'')+
+      stat('满仓股数',shf(cumSh),'')+
       stat('实际投入',money(cumCost),'')+
       stat('均价比首次买入低',base>0&&avg?pct((avg/base-1)*100):'—','down')+
       stat('剩余现金',money(M-cumCost),'')+
@@ -306,14 +313,17 @@ tr.next td{background:var(--soft)}
   function applyOpt(){
     const m=MKT[st.opt.mkt];
     document.querySelectorAll('.cur').forEach(e=>e.textContent=m.cur);
-    $('lotText').textContent=m.lotText;
-    $('s-shares').step=m.lot;
+    $('lotText').textContent=frac()?'碎股（保留 6 位小数）':m.lotText;
+    $('s-shares').step=frac()?'any':m.lot;
+    $('fracSeg').hidden=st.opt.mkt!=='us';
+    document.querySelectorAll('[data-frac]').forEach(b=>b.setAttribute('aria-pressed',(b.dataset.frac==='1')===!!st.opt.frac));
     $('wrap').classList.toggle('redup',st.opt.clr==='cn');
     document.querySelectorAll('[data-mkt]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mkt===st.opt.mkt));
     document.querySelectorAll('[data-clr]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.clr===st.opt.clr));
   }
   document.querySelectorAll('[data-mkt]').forEach(b=>b.addEventListener('click',()=>{st.opt.mkt=b.dataset.mkt;applyOpt();calc();save();}));
   document.querySelectorAll('[data-clr]').forEach(b=>b.addEventListener('click',()=>{st.opt.clr=b.dataset.clr;applyOpt();calc();save();}));
+  document.querySelectorAll('[data-frac]').forEach(b=>b.addEventListener('click',()=>{st.opt.frac=b.dataset.frac==='1';applyOpt();calc();save();}));
   function calc(){ calcSell(); calcBuy(); $('exampleTag').hidden=!isDefault(); }
 
   function bindField(id,kind,key){
