@@ -4,17 +4,24 @@
 <style>
 :root{
   --bg:#F3F5F8;--panel:#FFFFFF;--ink:#1B2230;--muted:#5E6878;--line:#DCE1E8;--soft:#EEF1F5;
-  --accent:#2B4C7E;--accent-ink:#FFFFFF;--up:#C8322F;--up-soft:#FBEAEA;--down:#13875A;--down-soft:#E3F4EC;--warn:#A86A12;--warn-soft:#FBF1DF;
+  --accent:#2B4C7E;--accent-ink:#FFFFFF;--red:#C8322F;--red-soft:#FBEAEA;--green:#13875A;--green-soft:#E3F4EC;--warn:#A86A12;--warn-soft:#FBF1DF;
   --sans:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   color-scheme:dark;--bg:#10141B;--panel:#19202A;--ink:#E6EAF0;--muted:#98A2B3;--line:#2B3441;--soft:#212935;
-  --accent:#86A8DB;--accent-ink:#10141B;--up:#F0645E;--up-soft:#3A1F22;--down:#43C08C;--down-soft:#16322A;--warn:#E3AA4E;--warn-soft:#382B16;}}
+  --accent:#86A8DB;--accent-ink:#10141B;--red:#F0645E;--red-soft:#3A1F22;--green:#43C08C;--green-soft:#16322A;--warn:#E3AA4E;--warn-soft:#382B16;}}
 :root[data-theme="dark"]{
   color-scheme:dark;--bg:#10141B;--panel:#19202A;--ink:#E6EAF0;--muted:#98A2B3;--line:#2B3441;--soft:#212935;
-  --accent:#86A8DB;--accent-ink:#10141B;--up:#F0645E;--up-soft:#3A1F22;--down:#43C08C;--down-soft:#16322A;--warn:#E3AA4E;--warn-soft:#382B16;}
+  --accent:#86A8DB;--accent-ink:#10141B;--red:#F0645E;--red-soft:#3A1F22;--green:#43C08C;--green-soft:#16322A;--warn:#E3AA4E;--warn-soft:#382B16;}
 [hidden]{display:none!important}
+.wrap{--up:var(--green);--up-soft:var(--green-soft);--down:var(--red);--down-soft:var(--red-soft)}
+.wrap.redup{--up:var(--red);--up-soft:var(--red-soft);--down:var(--green);--down-soft:var(--green-soft)}
+.opts{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.seg{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.seg .tabs{padding:3px}
+.seg .tab{padding:5px 12px;font-size:13px}
+.seg .tab[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.6}
 .wrap{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:28px 48px;display:grid;gap:20px}
 header{display:grid;gap:6px}
@@ -71,12 +78,21 @@ tr.next td{background:var(--soft)}
 .example{font-size:11px;letter-spacing:.06em;color:var(--warn);background:var(--warn-soft);padding:2px 8px;border-radius:99px;width:max-content}
 </style>
 
-<div class="wrap">
+<div class="wrap" id="wrap">
   <header>
     <span class="example" id="exampleTag">示例数据，改成你自己的即可</span>
     <h1>阶梯止盈加仓表</h1>
-    <p class="lede">涨到哪一档卖多少，跌到哪一档买多少。填好基准价和每一档比例，下面的表会算出每档的触发价、股数和盈亏。股数按 A 股一手 100 股向下取整。</p>
+    <p class="lede">涨到哪一档卖多少，跌到哪一档买多少。填好基准价和每一档比例，下面的表会算出每档的触发价、股数和盈亏。股数按<span id="lotText"></span>向下取整。</p>
   </header>
+
+  <div class="opts">
+    <div class="seg"><span>市场</span><div class="tabs">
+      <button class="tab" id="mkt-us" data-mkt="us" aria-pressed="true">美股</button>
+      <button class="tab" id="mkt-cn" data-mkt="cn" aria-pressed="false">A股</button></div></div>
+    <div class="seg"><span>涨跌颜色</span><div class="tabs">
+      <button class="tab" id="clr-us" data-clr="us" aria-pressed="true">绿涨红跌</button>
+      <button class="tab" id="clr-cn" data-clr="cn" aria-pressed="false">红涨绿跌</button></div></div>
+  </div>
 
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-k="sell" id="tab-sell" aria-selected="true">上涨 · 分批卖出</button>
@@ -88,8 +104,8 @@ tr.next td{background:var(--soft)}
     <div class="panel">
       <h2>卖出设置</h2>
       <div class="fields">
-        <label class="f">成本价（元）<input type="number" id="s-base" step="0.01" min="0"></label>
-        <label class="f">持股数（股）<input type="number" id="s-shares" step="100" min="0"></label>
+        <label class="f"><span>成本价（<span class="cur"></span>）</span><input type="number" id="s-base" step="0.01" min="0"></label>
+        <label class="f">持股数（股）<input type="number" id="s-shares" step="1" min="0"></label>
         <label class="f" style="grid-column:1/-1">当前价（可选，用来标记已触发的档位）<input type="number" id="s-now" step="0.01" min="0"></label>
       </div>
       <div class="rungs" id="s-rungs"></div>
@@ -117,8 +133,8 @@ tr.next td{background:var(--soft)}
     <div class="panel">
       <h2>买入设置</h2>
       <div class="fields">
-        <label class="f">首次买入价（元）<input type="number" id="b-base" step="0.01" min="0"></label>
-        <label class="f">计划总资金（元）<input type="number" id="b-cap" step="1000" min="0"></label>
+        <label class="f"><span>首次买入价（<span class="cur"></span>）</span><input type="number" id="b-base" step="0.01" min="0"></label>
+        <label class="f"><span>计划总资金（<span class="cur"></span>）</span><input type="number" id="b-cap" step="1000" min="0"></label>
         <label class="f" style="grid-column:1/-1">当前价（可选，用来标记已触发的档位）<input type="number" id="b-now" step="0.01" min="0"></label>
       </div>
       <div class="rungs" id="b-rungs"></div>
@@ -149,17 +165,20 @@ tr.next td{background:var(--soft)}
 <script>
 (function(){
   const DEF = {
-    sell:{base:10,shares:10000,now:'',rungs:[[10,10],[20,15],[30,15],[50,20],[70,20],[100,null]]},
-    buy:{base:10,cap:100000,now:'',rungs:[[0,30],[10,20],[20,25],[30,25]]}
+    opt:{mkt:'us',clr:'us'},
+    sell:{base:100,shares:100,now:'',rungs:[[10,10],[20,15],[30,15],[50,20],[70,20],[100,null]]},
+    buy:{base:100,cap:10000,now:'',rungs:[[0,30],[10,20],[20,25],[30,25]]}
   };
-  const KEY='ladder-v1';
+  const KEY='ladder-v2';
+  const MKT={us:{cur:'美元',sym:'$',lot:1,lotText:'整股（1 股）'},cn:{cur:'元',sym:'¥',lot:100,lotText:' A 股一手 100 股'}};
+  const lot=()=>MKT[st.opt.mkt].lot;
   let st, buyAvg=0, buySh=0;
   try{ st=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
-  if(!st||!st.sell||!st.buy) st=JSON.parse(JSON.stringify(DEF));
+  if(!st||!st.sell||!st.buy||!st.opt) st=JSON.parse(JSON.stringify(DEF));
   const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(st)); }catch(e){} };
   const $=id=>document.getElementById(id);
   const num=v=>{const n=parseFloat(v);return isFinite(n)?n:0;};
-  const money=n=>(n<0?'−':'')+Math.abs(n).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const money=n=>(n<0?'−':'')+MKT[st.opt.mkt].sym+Math.abs(n).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2});
   const int=n=>Math.round(n).toLocaleString('zh-CN');
   const pct=n=>(n>0?'+':n<0?'−':'')+Math.abs(n).toFixed(1).replace(/\.0$/,'')+'%';
   const p2=n=>n.toFixed(2);
@@ -201,7 +220,7 @@ tr.next td{background:var(--soft)}
       const price=base*(1+r.up/100);
       let sh;
       if(last) sh=remain;
-      else { ratioSum+=r.ratio||0; sh=Math.min(remain,Math.floor(N*(r.ratio||0)/100/100)*100); }
+      else { ratioSum+=r.ratio||0; sh=Math.min(remain,Math.floor(N*(r.ratio||0)/100/lot())*lot()); }
       remain-=sh;
       const proceeds=sh*price, p=sh*(price-base);
       cum+=proceeds; profit+=p;
@@ -210,9 +229,9 @@ tr.next td{background:var(--soft)}
       return {k,up:r.up,ratio:last?null:r.ratio,price,sh,proceeds,p,remain,effCost,last};
     });
     if(ratioSum>=100) msgs.push('前几档卖出比例合计已达 '+ratioSum+'%，最后一档已经没有可卖的股票。');
-    if(N%100!==0) msgs.push('持股数不是 100 的整数倍，零股会在最后一档一起卖出。');
+    if(lot()>1&&N%lot()!==0) msgs.push('持股数不是 100 的整数倍，零股会在最后一档一起卖出。');
     const tiny=out.find(o=>!o.last&&o.ratio>0&&o.sh===0);
-    if(tiny) msgs.push('有档位按比例算不够一手（100 股），这档卖 0 股。持股较少时可以减少档数。');
+    if(tiny) msgs.push('有档位按比例算不够'+(lot()>1?'一手（100 股）':' 1 股')+'，这档卖 0 股。持股较少时可以减少档数。');
 
     // 当前价标记
     let nextIdx=-1;
@@ -246,7 +265,7 @@ tr.next td{background:var(--soft)}
     const out=rows.map((r,k)=>{
       sum+=r.ratio;
       const price=base*(1-r.dn/100);
-      const sh=price>0?Math.floor(M*r.ratio/100/price/100)*100:0;
+      const sh=price>0?Math.floor(M*r.ratio/100/price/lot())*lot():0;
       const cost=sh*price;
       cumSh+=sh; cumCost+=cost;
       const avg=cumSh>0?cumCost/cumSh:0;
@@ -256,7 +275,7 @@ tr.next td{background:var(--soft)}
     if(Math.abs(sum-100)>0.001) msgs.push('各档买入比例合计 '+sum+'%，'+(sum>100?'超过了计划资金，请调低。':'还有 '+(100-sum)+'% 资金没有安排。'));
     if(rows.some(r=>r.dn>=100)) msgs.push('跌幅不能达到 100%。');
     const tiny=out.find(o=>o.ratio>0&&o.sh===0);
-    if(tiny) msgs.push('有档位的资金不够买一手（100 股），这档买 0 股。');
+    if(tiny) msgs.push('有档位的资金不够买'+(lot()>1?'一手（100 股）':' 1 股')+'，这档买 0 股。');
     let nextIdx=-1;
     if(now>0) nextIdx=out.findIndex(o=>now>o.price);
     $('b-body').innerHTML=out.map(o=>{
@@ -284,6 +303,17 @@ tr.next td{background:var(--soft)}
   }
 
   function stat(k,v,c){return `<div class="stat"><span class="k">${k}</span><span class="v ${c}">${v}</span></div>`;}
+  function applyOpt(){
+    const m=MKT[st.opt.mkt];
+    document.querySelectorAll('.cur').forEach(e=>e.textContent=m.cur);
+    $('lotText').textContent=m.lotText;
+    $('s-shares').step=m.lot;
+    $('wrap').classList.toggle('redup',st.opt.clr==='cn');
+    document.querySelectorAll('[data-mkt]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mkt===st.opt.mkt));
+    document.querySelectorAll('[data-clr]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.clr===st.opt.clr));
+  }
+  document.querySelectorAll('[data-mkt]').forEach(b=>b.addEventListener('click',()=>{st.opt.mkt=b.dataset.mkt;applyOpt();calc();save();}));
+  document.querySelectorAll('[data-clr]').forEach(b=>b.addEventListener('click',()=>{st.opt.clr=b.dataset.clr;applyOpt();calc();save();}));
   function calc(){ calcSell(); calcBuy(); $('exampleTag').hidden=!isDefault(); }
 
   function bindField(id,kind,key){
@@ -293,7 +323,7 @@ tr.next td{background:var(--soft)}
   function bindAll(){
     bindField('s-base','sell','base'); bindField('s-shares','sell','shares'); bindField('s-now','sell','now');
     bindField('b-base','buy','base'); bindField('b-cap','buy','cap'); bindField('b-now','buy','now');
-    rungEditor('sell'); rungEditor('buy'); calc();
+    applyOpt(); rungEditor('sell'); rungEditor('buy'); calc();
   }
 
   $('s-add').onclick=()=>{
@@ -316,11 +346,11 @@ tr.next td{background:var(--soft)}
   };
 
   function show(k){
-    document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.k===k));
+    document.querySelectorAll('[role=tab]').forEach(t=>t.setAttribute('aria-selected',t.dataset.k===k));
     $('view-sell').hidden=k!=='sell'; $('view-buy').hidden=k!=='buy';
     try{ localStorage.setItem(KEY+'-tab',k); }catch(e){}
   }
-  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>show(t.dataset.k)));
+  document.querySelectorAll('[role=tab]').forEach(t=>t.addEventListener('click',()=>show(t.dataset.k)));
   let tab='sell';
   if(location.hash==='#buy') tab='buy';
   else { try{ tab=localStorage.getItem(KEY+'-tab')||'sell'; }catch(e){} }

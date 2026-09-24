@@ -1,0 +1,87 @@
+// ==================================================
+//  阶梯止盈加仓线（TradingView Pine Script v5，美股可用）
+//  用法：TradingView 底部打开「Pine 编辑器」→ 新建 → 全部替换为本文件内容
+//        → 保存 → 「添加到图表」。在指标设置里填这只股票的成本价。
+//  作用：以成本价为基准画出各档卖出线（上）和加仓线（下），
+//        最高价第一次涨到卖出线、最低价第一次跌到加仓线时做标记，并可设置提醒。
+// ==================================================
+//@version=5
+indicator("阶梯止盈加仓线", overlay = true, max_labels_count = 100)
+
+cost = input.float(100.0, "成本价 / 首次买入价", minval = 0.01, step = 0.01)
+
+gSell = "上涨分批卖出（比例按最初持股数）"
+s1u = input.float(10,  "第1档 涨幅%",  group = gSell, inline = "s1")
+s1p = input.float(10,  "卖出%",        group = gSell, inline = "s1")
+s2u = input.float(20,  "第2档 涨幅%",  group = gSell, inline = "s2")
+s2p = input.float(15,  "卖出%",        group = gSell, inline = "s2")
+s3u = input.float(30,  "第3档 涨幅%",  group = gSell, inline = "s3")
+s3p = input.float(15,  "卖出%",        group = gSell, inline = "s3")
+s4u = input.float(50,  "第4档 涨幅%",  group = gSell, inline = "s4")
+s4p = input.float(20,  "卖出%",        group = gSell, inline = "s4")
+s5u = input.float(70,  "第5档 涨幅%",  group = gSell, inline = "s5")
+s5p = input.float(20,  "卖出%",        group = gSell, inline = "s5")
+s6u = input.float(100, "清仓 涨幅%",   group = gSell)
+
+gBuy = "下跌分批买入（比例按计划总资金）"
+b1d = input.float(10, "第2档 跌幅%", group = gBuy, inline = "b1")
+b1p = input.float(20, "买入%",       group = gBuy, inline = "b1")
+b2d = input.float(20, "第3档 跌幅%", group = gBuy, inline = "b2")
+b2p = input.float(25, "买入%",       group = gBuy, inline = "b2")
+b3d = input.float(30, "第4档 跌幅%", group = gBuy, inline = "b3")
+b3p = input.float(25, "买入%",       group = gBuy, inline = "b3")
+
+upColor   = input.color(color.new(#13875A, 0), "上涨线颜色")
+downColor = input.color(color.new(#C8322F, 0), "下跌线颜色")
+
+lvl(p) => cost * (1 + p / 100)
+fmt(x) => str.tostring(x, "#.##")
+
+// ---- 画线 ----
+plot(cost, "成本", color.gray, 2)
+plot(lvl(s1u), "卖1", upColor, 1, plot.style_circles)
+plot(lvl(s2u), "卖2", upColor, 1, plot.style_circles)
+plot(lvl(s3u), "卖3", upColor, 1, plot.style_circles)
+plot(lvl(s4u), "卖4", upColor, 1, plot.style_circles)
+plot(lvl(s5u), "卖5", upColor, 1, plot.style_circles)
+plot(lvl(s6u), "清仓", upColor, 2)
+plot(lvl(-b1d), "加仓2", downColor, 1, plot.style_circles)
+plot(lvl(-b2d), "加仓3", downColor, 1, plot.style_circles)
+plot(lvl(-b3d), "加仓4", downColor, 1, plot.style_circles)
+
+// ---- 最右边的文字说明 ----
+var label[] tags = array.new<label>()
+tag(y, txt, c) =>
+    array.push(tags, label.new(bar_index + 2, y, txt, style = label.style_label_left, color = color.new(c, 85), textcolor = c, size = size.small))
+
+if barstate.islast
+    for l in tags
+        label.delete(l)
+    array.clear(tags)
+    tag(cost, "成本 " + fmt(cost), color.gray)
+    tag(lvl(s1u), "+" + fmt(s1u) + "% 卖" + fmt(s1p) + "%  " + fmt(lvl(s1u)), upColor)
+    tag(lvl(s2u), "+" + fmt(s2u) + "% 卖" + fmt(s2p) + "%  " + fmt(lvl(s2u)), upColor)
+    tag(lvl(s3u), "+" + fmt(s3u) + "% 卖" + fmt(s3p) + "%  " + fmt(lvl(s3u)), upColor)
+    tag(lvl(s4u), "+" + fmt(s4u) + "% 卖" + fmt(s4p) + "%  " + fmt(lvl(s4u)), upColor)
+    tag(lvl(s5u), "+" + fmt(s5u) + "% 卖" + fmt(s5p) + "%  " + fmt(lvl(s5u)), upColor)
+    tag(lvl(s6u), "+" + fmt(s6u) + "% 全部卖出  " + fmt(lvl(s6u)), upColor)
+    tag(lvl(-b1d), "-" + fmt(b1d) + "% 加仓" + fmt(b1p) + "%  " + fmt(lvl(-b1d)), downColor)
+    tag(lvl(-b2d), "-" + fmt(b2d) + "% 加仓" + fmt(b2p) + "%  " + fmt(lvl(-b2d)), downColor)
+    tag(lvl(-b3d), "-" + fmt(b3d) + "% 加仓" + fmt(b3p) + "%  " + fmt(lvl(-b3d)), downColor)
+
+// ---- 触发标记 ----
+hitUp(p)   => high >= lvl(p) and high[1] < lvl(p)
+hitDown(p) => low <= lvl(-p) and low[1] > lvl(-p)
+
+sellHit = hitUp(s1u) or hitUp(s2u) or hitUp(s3u) or hitUp(s4u) or hitUp(s5u)
+allHit  = hitUp(s6u)
+buyHit  = hitDown(b1d) or hitDown(b2d) or hitDown(b3d)
+
+plotshape(sellHit and not allHit, "到卖出档", shape.triangledown, location.abovebar, upColor, size = size.small)
+plotshape(allHit, "到清仓档", shape.labeldown, location.abovebar, upColor, text = "清仓", textcolor = color.white)
+plotshape(buyHit, "到加仓档", shape.triangleup, location.belowbar, downColor, size = size.small)
+
+// ---- 提醒：图表上右键 → 添加提醒 → 条件选本指标 ----
+alertcondition(sellHit, "到达卖出档", "{{ticker}} 涨到分批卖出档位，现价 {{close}}")
+alertcondition(allHit,  "到达清仓档", "{{ticker}} 涨到清仓档位，现价 {{close}}")
+alertcondition(buyHit,  "到达加仓档", "{{ticker}} 跌到分批加仓档位，现价 {{close}}")
