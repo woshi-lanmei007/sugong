@@ -1,0 +1,47 @@
+{==================================================
+  阶梯止盈加仓线  （类型：技术指标公式 → 主图叠加）
+  作用：以你的成本价为基准，在K线上画出各档卖出线和加仓线，
+        最高价第一次涨到某条卖出线、最低价第一次跌到某条加仓线时做标记
+
+  ★ 使用前必须先加一个参数（公式编辑器上方的“参数”表）：
+     参数1  名称 CB   最小 0.01   最大 9999   缺省 10
+  ★ 在K线图上：右键 → 调整指标参数，把 CB 改成这只股票的成本价
+
+  档位与计算器默认值一致，要改比例就同时改下面的倍数和文字
+==================================================}
+
+成本:CB,COLORWHITE,LINETHICK2;
+
+{---- 上涨卖出线（红）----}
+卖1:CB*1.10,DOTLINE,COLORRED;
+卖2:CB*1.20,DOTLINE,COLORRED;
+卖3:CB*1.30,DOTLINE,COLORRED;
+卖4:CB*1.50,DOTLINE,COLORRED;
+卖5:CB*1.70,DOTLINE,COLORRED;
+清仓:CB*2.00,COLORRED,LINETHICK2;
+
+{---- 下跌加仓线（绿）----}
+买2:CB*0.90,DOTLINE,COLORGREEN;
+买3:CB*0.80,DOTLINE,COLORGREEN;
+买4:CB*0.70,DOTLINE,COLORGREEN;
+
+{---- 在最右边写上每条线的含义 ----}
+DRAWTEXT(ISLASTBAR,成本,'  成本'),COLORWHITE;
+DRAWTEXT(ISLASTBAR,卖1,'  +10% 卖10%'),COLORRED;
+DRAWTEXT(ISLASTBAR,卖2,'  +20% 卖15%'),COLORRED;
+DRAWTEXT(ISLASTBAR,卖3,'  +30% 卖15%'),COLORRED;
+DRAWTEXT(ISLASTBAR,卖4,'  +50% 卖20%'),COLORRED;
+DRAWTEXT(ISLASTBAR,卖5,'  +70% 卖20%'),COLORRED;
+DRAWTEXT(ISLASTBAR,清仓,'  +100% 全部卖出'),COLORRED;
+DRAWTEXT(ISLASTBAR,买2,'  -10% 加仓20%'),COLORGREEN;
+DRAWTEXT(ISLASTBAR,买3,'  -20% 加仓25%'),COLORGREEN;
+DRAWTEXT(ISLASTBAR,买4,'  -30% 加仓25%'),COLORGREEN;
+
+{---- 触发标记：向上碰到卖出线 ----}
+碰卖:=CROSS(H,卖1) OR CROSS(H,卖2) OR CROSS(H,卖3) OR CROSS(H,卖4) OR CROSS(H,卖5);
+DRAWICON(碰卖,H*1.02,2);
+DRAWTEXT(CROSS(H,清仓),H*1.04,'清仓'),COLORRED;
+
+{---- 触发标记：向下碰到加仓线 ----}
+碰买:=CROSS(买2,L) OR CROSS(买3,L) OR CROSS(买4,L);
+DRAWICON(碰买,L*0.98,1);

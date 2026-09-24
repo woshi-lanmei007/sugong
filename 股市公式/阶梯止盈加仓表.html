@@ -1,0 +1,330 @@
+<title>阶梯止盈加仓表</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#F3F5F8;--panel:#FFFFFF;--ink:#1B2230;--muted:#5E6878;--line:#DCE1E8;--soft:#EEF1F5;
+  --accent:#2B4C7E;--accent-ink:#FFFFFF;--up:#C8322F;--up-soft:#FBEAEA;--down:#13875A;--down-soft:#E3F4EC;--warn:#A86A12;--warn-soft:#FBF1DF;
+  --sans:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;--bg:#10141B;--panel:#19202A;--ink:#E6EAF0;--muted:#98A2B3;--line:#2B3441;--soft:#212935;
+  --accent:#86A8DB;--accent-ink:#10141B;--up:#F0645E;--up-soft:#3A1F22;--down:#43C08C;--down-soft:#16322A;--warn:#E3AA4E;--warn-soft:#382B16;}}
+:root[data-theme="dark"]{
+  color-scheme:dark;--bg:#10141B;--panel:#19202A;--ink:#E6EAF0;--muted:#98A2B3;--line:#2B3441;--soft:#212935;
+  --accent:#86A8DB;--accent-ink:#10141B;--up:#F0645E;--up-soft:#3A1F22;--down:#43C08C;--down-soft:#16322A;--warn:#E3AA4E;--warn-soft:#382B16;}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.6}
+.wrap{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:28px 48px;display:grid;gap:20px}
+header{display:grid;gap:6px}
+h1{font-size:26px;line-height:1.25;margin:0;text-wrap:balance;letter-spacing:.02em}
+.lede{margin:0;color:var(--muted);max-width:62ch}
+.tabs{display:flex;gap:6px;background:var(--soft);padding:4px;border-radius:10px;width:max-content;max-width:100%}
+.tab{font:inherit;font-weight:500;border:0;background:transparent;color:var(--muted);padding:8px 16px;border-radius:7px;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.tab[aria-selected="true"][data-k="sell"]{color:var(--up)}
+.tab[aria-selected="true"][data-k="buy"]{color:var(--down)}
+.tab:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:760px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;display:grid;gap:14px}
+.panel h2{font-size:15px;margin:0}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label.f{display:grid;gap:4px;font-size:12px;color:var(--muted)}
+input[type=number]{font-family:var(--mono);font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 9px;width:100%;box-sizing:border-box;font-variant-numeric:tabular-nums}
+.rungs{display:grid;gap:6px}
+.rung-head,.rung{display:grid;grid-template-columns:1fr 1fr 32px;gap:8px;align-items:center}
+.rung-head{font-size:12px;color:var(--muted)}
+.rung .lock{font-size:12px;color:var(--muted);padding:7px 0}
+.icon-btn{font:inherit;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:7px;height:34px;cursor:pointer}
+.icon-btn:hover{color:var(--ink);border-color:var(--muted)}
+.row-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:inherit;font-weight:500;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:7px 12px;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.note{font-size:12px;color:var(--muted);margin:0}
+.msg{font-size:13px;border-radius:8px;padding:8px 10px;margin:0}
+.msg.warn{background:var(--warn-soft);color:var(--warn)}
+.sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:520px){.sum{grid-template-columns:1fr 1fr}}
+.stat{background:var(--soft);border-radius:9px;padding:10px 12px;display:grid;gap:2px}
+.stat .k{font-size:12px;color:var(--muted)}
+.stat .v{font-family:var(--mono);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.v.up{color:var(--up)}.v.down{color:var(--down)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:640px;font-variant-numeric:tabular-nums}
+th,td{padding:9px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{font-size:12px;font-weight:500;color:var(--muted);background:var(--soft)}
+th:first-child,td:first-child{text-align:left}
+td{font-family:var(--mono);font-size:13px}
+tr:last-child td{border-bottom:0}
+td.lvl{font-family:var(--sans);font-weight:500}
+.pill{display:inline-block;font-family:var(--sans);font-size:11px;padding:1px 7px;border-radius:99px;margin-left:6px;vertical-align:1px}
+.pill.done{background:var(--soft);color:var(--muted)}
+.pill.next{background:var(--accent);color:var(--accent-ink)}
+.pill.zero{background:var(--up-soft);color:var(--up)}
+tr.done td{color:var(--muted)}
+tr.next td{background:var(--soft)}
+.sell .price{color:var(--up)} .buy .price{color:var(--down)}
+.ladder-note{display:grid;gap:6px;font-size:13px;color:var(--muted);max-width:70ch}
+.ladder-note p{margin:0}
+.example{font-size:11px;letter-spacing:.06em;color:var(--warn);background:var(--warn-soft);padding:2px 8px;border-radius:99px;width:max-content}
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="example" id="exampleTag">示例数据，改成你自己的即可</span>
+    <h1>阶梯止盈加仓表</h1>
+    <p class="lede">涨到哪一档卖多少，跌到哪一档买多少。填好基准价和每一档比例，下面的表会算出每档的触发价、股数和盈亏。股数按 A 股一手 100 股向下取整。</p>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-k="sell" id="tab-sell" aria-selected="true">上涨 · 分批卖出</button>
+    <button class="tab" role="tab" data-k="buy" id="tab-buy" aria-selected="false">下跌 · 分批买入</button>
+  </div>
+
+  <!-- 卖出 -->
+  <section id="view-sell" class="grid sell">
+    <div class="panel">
+      <h2>卖出设置</h2>
+      <div class="fields">
+        <label class="f">成本价（元）<input type="number" id="s-base" step="0.01" min="0"></label>
+        <label class="f">持股数（股）<input type="number" id="s-shares" step="100" min="0"></label>
+        <label class="f" style="grid-column:1/-1">当前价（可选，用来标记已触发的档位）<input type="number" id="s-now" step="0.01" min="0"></label>
+      </div>
+      <div class="rungs" id="s-rungs"></div>
+      <div class="row-actions">
+        <button class="btn" id="s-add">加一档</button>
+        <button class="btn" id="s-reset">恢复默认</button>
+      </div>
+      <p class="note">卖出比例按<b>最初持股数</b>计算。最后一档固定卖出剩余全部股票。</p>
+    </div>
+    <div class="panel">
+      <div class="sum" id="s-sum"></div>
+      <div id="s-msg"></div>
+      <div class="tbl"><table>
+        <thead><tr><th>档位</th><th>涨幅</th><th>触发价</th><th>卖出股数</th><th>回笼资金</th><th>本档利润</th><th>剩余股数</th><th>剩余持仓成本</th></tr></thead>
+        <tbody id="s-body"></tbody>
+      </table></div>
+      <div class="ladder-note">
+        <p><b>剩余持仓成本</b> = （买入总成本 − 已回笼资金）÷ 剩余股数。卖到一定程度后它会降到 0 以下，这时剩下的股票都是赚来的，称为“零成本持股”。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 买入 -->
+  <section id="view-buy" class="grid buy" hidden>
+    <div class="panel">
+      <h2>买入设置</h2>
+      <div class="fields">
+        <label class="f">首次买入价（元）<input type="number" id="b-base" step="0.01" min="0"></label>
+        <label class="f">计划总资金（元）<input type="number" id="b-cap" step="1000" min="0"></label>
+        <label class="f" style="grid-column:1/-1">当前价（可选，用来标记已触发的档位）<input type="number" id="b-now" step="0.01" min="0"></label>
+      </div>
+      <div class="rungs" id="b-rungs"></div>
+      <div class="row-actions">
+        <button class="btn" id="b-add">加一档</button>
+        <button class="btn" id="b-reset">恢复默认</button>
+      </div>
+      <p class="note">买入比例按<b>计划总资金</b>计算，各档合计应为 100%。第一档跌幅填 0 就是首次建仓。</p>
+    </div>
+    <div class="panel">
+      <div class="sum" id="b-sum"></div>
+      <div id="b-msg"></div>
+      <div class="tbl"><table>
+        <thead><tr><th>档位</th><th>跌幅</th><th>触发价</th><th>买入股数</th><th>本档花费</th><th>累计股数</th><th>持仓均价</th><th>回本需涨</th></tr></thead>
+        <tbody id="b-body"></tbody>
+      </table></div>
+      <div class="row-actions">
+        <button class="btn primary" id="b-to-sell">按这个均价和股数做卖出计划</button>
+      </div>
+      <div class="ladder-note">
+        <p><b>回本需涨</b>：股价停在这一档时，要涨多少才回到持仓均价。越往下加仓，均价越低，回本越容易，但总仓位和风险也越大。</p>
+        <p>最后一档买完就满仓了，之后再跌也不要继续加钱。建议另外定一条止损线。</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  const DEF = {
+    sell:{base:10,shares:10000,now:'',rungs:[[10,10],[20,15],[30,15],[50,20],[70,20],[100,null]]},
+    buy:{base:10,cap:100000,now:'',rungs:[[0,30],[10,20],[20,25],[30,25]]}
+  };
+  const KEY='ladder-v1';
+  let st, buyAvg=0, buySh=0;
+  try{ st=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+  if(!st||!st.sell||!st.buy) st=JSON.parse(JSON.stringify(DEF));
+  const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(st)); }catch(e){} };
+  const $=id=>document.getElementById(id);
+  const num=v=>{const n=parseFloat(v);return isFinite(n)?n:0;};
+  const money=n=>(n<0?'−':'')+Math.abs(n).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const int=n=>Math.round(n).toLocaleString('zh-CN');
+  const pct=n=>(n>0?'+':n<0?'−':'')+Math.abs(n).toFixed(1).replace(/\.0$/,'')+'%';
+  const p2=n=>n.toFixed(2);
+  const isDefault=()=>JSON.stringify(st)===JSON.stringify(DEF);
+
+  function rungEditor(kind){
+    const box=$(kind[0]+'-rungs');
+    const s=st[kind];
+    const head = kind==='sell'?['涨到 (%)','卖出 (% 原持股)']:['跌到 (%)','买入 (% 总资金)'];
+    let h=`<div class="rung-head"><span>${head[0]}</span><span>${head[1]}</span><span></span></div>`;
+    s.rungs.forEach((r,i)=>{
+      const last = kind==='sell' && i===s.rungs.length-1;
+      h+=`<div class="rung">
+        <input type="number" id="${kind}-r${i}-a" data-i="${i}" data-j="0" step="1" min="0" value="${r[0]}" aria-label="第${i+1}档${head[0]}">
+        ${last?'<span class="lock">剩余全部</span>':`<input type="number" id="${kind}-r${i}-b" data-i="${i}" data-j="1" step="1" min="0" value="${r[1]}" aria-label="第${i+1}档${head[1]}">`}
+        <button class="icon-btn" data-del="${i}" aria-label="删除第${i+1}档" ${s.rungs.length<=1?'disabled':''}>×</button>
+      </div>`;
+    });
+    box.innerHTML=h;
+    box.querySelectorAll('input').forEach(inp=>inp.addEventListener('input',()=>{
+      s.rungs[+inp.dataset.i][+inp.dataset.j]=num(inp.value); calc(); save();
+    }));
+    box.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{
+      s.rungs.splice(+b.dataset.del,1);
+      if(kind==='sell') s.rungs[s.rungs.length-1][1]=null;
+      rungEditor(kind); calc(); save();
+    }));
+  }
+
+  function calcSell(){
+    const s=st.sell, base=num(s.base), N=Math.floor(num(s.shares)), now=num(s.now);
+    const rows=s.rungs.map((r,i)=>({up:num(r[0]),ratio:r[1]==null?null:num(r[1]),i})).sort((a,b)=>a.up-b.up);
+    // 最后一档（涨幅最高）卖出剩余全部
+    let remain=N, cum=0, profit=0, zeroAt=null, msgs=[];
+    const totalCost=N*base;
+    let ratioSum=0;
+    const out=rows.map((r,k)=>{
+      const last=k===rows.length-1;
+      const price=base*(1+r.up/100);
+      let sh;
+      if(last) sh=remain;
+      else { ratioSum+=r.ratio||0; sh=Math.min(remain,Math.floor(N*(r.ratio||0)/100/100)*100); }
+      remain-=sh;
+      const proceeds=sh*price, p=sh*(price-base);
+      cum+=proceeds; profit+=p;
+      const effCost=remain>0?(totalCost-cum)/remain:null;
+      if(zeroAt==null && remain>0 && effCost<=0) zeroAt=k;
+      return {k,up:r.up,ratio:last?null:r.ratio,price,sh,proceeds,p,remain,effCost,last};
+    });
+    if(ratioSum>=100) msgs.push('前几档卖出比例合计已达 '+ratioSum+'%，最后一档已经没有可卖的股票。');
+    if(N%100!==0) msgs.push('持股数不是 100 的整数倍，零股会在最后一档一起卖出。');
+    const tiny=out.find(o=>!o.last&&o.ratio>0&&o.sh===0);
+    if(tiny) msgs.push('有档位按比例算不够一手（100 股），这档卖 0 股。持股较少时可以减少档数。');
+
+    // 当前价标记
+    let nextIdx=-1;
+    if(now>0){ nextIdx=out.findIndex(o=>now<o.price); }
+    $('s-body').innerHTML=out.map(o=>{
+      const done=now>0&&now>=o.price, next=o.k===nextIdx;
+      let tag='';
+      if(done) tag='<span class="pill done">已触发</span>'; else if(next) tag='<span class="pill next">下一档</span>';
+      const eff=o.remain===0?'—':(o.effCost<=0?'<span class="pill zero">零成本</span>':p2(o.effCost));
+      return `<tr class="${done?'done':''} ${next?'next':''}">
+        <td class="lvl">${o.last?'清仓':'第 '+(o.k+1)+' 档'}${tag}</td>
+        <td>${pct(o.up)}</td><td class="price">${p2(o.price)}</td>
+        <td>${int(o.sh)}${o.last?'':'<span class="note"> ('+o.ratio+'%)</span>'}</td>
+        <td>${money(o.proceeds)}</td><td>${money(o.p)}</td><td>${int(o.remain)}</td><td>${eff}</td></tr>`;
+    }).join('');
+    const avg=N>0?cum/N:0;
+    $('s-sum').innerHTML=
+      stat('全部卖完总利润',money(profit),'up')+
+      stat('平均卖出价',p2(avg),'')+
+      stat('平均收益率',base>0?pct((avg/base-1)*100):'—','up')+
+      stat('收回本金的档位', zeroAt==null?(out.length?'清仓时':'—'):'第 '+(zeroAt+1)+' 档','')+
+      stat('投入本金',money(totalCost),'')+
+      stat('最高触发价',out.length?p2(out[out.length-1].price):'—','up');
+    $('s-msg').innerHTML=msgs.map(m=>`<p class="msg warn">${m}</p>`).join('');
+  }
+
+  function calcBuy(){
+    const s=st.buy, base=num(s.base), M=num(s.cap), now=num(s.now);
+    const rows=s.rungs.map(r=>({dn:num(r[0]),ratio:num(r[1])})).sort((a,b)=>a.dn-b.dn);
+    let cumSh=0, cumCost=0, msgs=[], sum=0;
+    const out=rows.map((r,k)=>{
+      sum+=r.ratio;
+      const price=base*(1-r.dn/100);
+      const sh=price>0?Math.floor(M*r.ratio/100/price/100)*100:0;
+      const cost=sh*price;
+      cumSh+=sh; cumCost+=cost;
+      const avg=cumSh>0?cumCost/cumSh:0;
+      const need=price>0&&avg>0?(avg/price-1)*100:0;
+      return {k,dn:r.dn,ratio:r.ratio,price,sh,cost,cumSh,avg,need};
+    });
+    if(Math.abs(sum-100)>0.001) msgs.push('各档买入比例合计 '+sum+'%，'+(sum>100?'超过了计划资金，请调低。':'还有 '+(100-sum)+'% 资金没有安排。'));
+    if(rows.some(r=>r.dn>=100)) msgs.push('跌幅不能达到 100%。');
+    const tiny=out.find(o=>o.ratio>0&&o.sh===0);
+    if(tiny) msgs.push('有档位的资金不够买一手（100 股），这档买 0 股。');
+    let nextIdx=-1;
+    if(now>0) nextIdx=out.findIndex(o=>now>o.price);
+    $('b-body').innerHTML=out.map(o=>{
+      const done=now>0&&now<=o.price, next=o.k===nextIdx;
+      let tag='';
+      if(done) tag='<span class="pill done">已触发</span>'; else if(next) tag='<span class="pill next">下一档</span>';
+      return `<tr class="${done?'done':''} ${next?'next':''}">
+        <td class="lvl">${o.dn===0?'首次建仓':'第 '+(o.k+1)+' 档'}${tag}</td>
+        <td>${o.dn===0?'0%':pct(-o.dn)}</td><td class="price">${p2(o.price)}</td>
+        <td>${int(o.sh)}<span class="note"> (${o.ratio}%)</span></td>
+        <td>${money(o.cost)}</td><td>${int(o.cumSh)}</td><td>${o.avg?p2(o.avg):'—'}</td><td>${o.need?pct(o.need):'—'}</td></tr>`;
+    }).join('');
+    const lastP=out.length?out[out.length-1].price:0;
+    const avg=cumSh>0?cumCost/cumSh:0;
+    const loss10=cumSh*(lastP*0.9-avg);
+    $('b-sum').innerHTML=
+      stat('满仓后持仓均价',avg?p2(avg):'—','')+
+      stat('满仓股数',int(cumSh),'')+
+      stat('实际投入',money(cumCost),'')+
+      stat('均价比首次买入低',base>0&&avg?pct((avg/base-1)*100):'—','down')+
+      stat('剩余现金',money(M-cumCost),'')+
+      stat('满仓后再跌 10% 浮亏',cumSh?money(loss10):'—','down');
+    $('b-msg').innerHTML=msgs.map(m=>`<p class="msg warn">${m}</p>`).join('');
+    buyAvg=avg; buySh=cumSh;
+  }
+
+  function stat(k,v,c){return `<div class="stat"><span class="k">${k}</span><span class="v ${c}">${v}</span></div>`;}
+  function calc(){ calcSell(); calcBuy(); $('exampleTag').hidden=!isDefault(); }
+
+  function bindField(id,kind,key){
+    const el=$(id); el.value=st[kind][key];
+    el.addEventListener('input',()=>{ st[kind][key]=el.value===''?'':num(el.value); calc(); save(); });
+  }
+  function bindAll(){
+    bindField('s-base','sell','base'); bindField('s-shares','sell','shares'); bindField('s-now','sell','now');
+    bindField('b-base','buy','base'); bindField('b-cap','buy','cap'); bindField('b-now','buy','now');
+    rungEditor('sell'); rungEditor('buy'); calc();
+  }
+
+  $('s-add').onclick=()=>{
+    const r=st.sell.rungs, lastUp=r.length?num(r[r.length-1][0]):0;
+    const prevUp=r.length>1?num(r[r.length-2][0]):0;
+    r.splice(r.length-1,0,[Math.round((prevUp+lastUp)/2),10]);
+    rungEditor('sell'); calc(); save();
+  };
+  $('b-add').onclick=()=>{
+    const r=st.buy.rungs, last=r.length?num(r[r.length-1][0]):0;
+    r.push([last+10,10]); rungEditor('buy'); calc(); save();
+  };
+  $('s-reset').onclick=()=>{ st.sell=JSON.parse(JSON.stringify(DEF.sell)); save(); bindAll(); };
+  $('b-reset').onclick=()=>{ st.buy=JSON.parse(JSON.stringify(DEF.buy)); save(); bindAll(); };
+  $('b-to-sell').onclick=()=>{
+    if(!buySh) return;
+    st.sell.base=+buyAvg.toFixed(2); st.sell.shares=buySh;
+    $('s-base').value=st.sell.base; $('s-shares').value=st.sell.shares;
+    calc(); save(); show('sell');
+  };
+
+  function show(k){
+    document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.k===k));
+    $('view-sell').hidden=k!=='sell'; $('view-buy').hidden=k!=='buy';
+    try{ localStorage.setItem(KEY+'-tab',k); }catch(e){}
+  }
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>show(t.dataset.k)));
+  let tab='sell';
+  if(location.hash==='#buy') tab='buy';
+  else { try{ tab=localStorage.getItem(KEY+'-tab')||'sell'; }catch(e){} }
+
+  bindAll(); show(tab);
+})();
+</script>
