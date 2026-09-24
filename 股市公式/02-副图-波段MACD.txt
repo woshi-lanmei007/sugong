@@ -1,0 +1,22 @@
+{==================================================
+  波段MACD  （类型：技术指标公式 → 副图）
+  作用：标准 MACD + 区分零轴上/下金叉 + 疑似底背离提示
+==================================================}
+
+DIF:EMA(C,12)-EMA(C,26),COLORWHITE;
+DEA:EMA(DIF,9),COLORYELLOW;
+MACD:(DIF-DEA)*2,COLORSTICK;
+零轴:0,COLORGRAY;
+
+金叉:=CROSS(DIF,DEA);
+死叉:=CROSS(DEA,DIF);
+
+{零轴上金叉：趋势中的加速信号，更可靠}
+DRAWTEXT(金叉 AND DEA>0,DEA,'强金叉'),COLORRED;
+{零轴下金叉：只是反弹，力度待确认}
+DRAWTEXT(金叉 AND DEA<=0,DEA,'弱金叉'),COLORMAGENTA;
+DRAWTEXT(死叉 AND DEA>0,DEA,'死叉'),COLORGREEN;
+
+{疑似底背离：收盘价创20日新低，但 DIF 高于前20日的最低值}
+底背离:=C=LLV(C,20) AND DIF<0 AND DIF>REF(LLV(DIF,20),1);
+DRAWTEXT(FILTER(底背离,10),DIF,'背离'),COLORCYAN;

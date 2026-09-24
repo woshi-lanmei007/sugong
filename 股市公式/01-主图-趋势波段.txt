@@ -1,0 +1,35 @@
+{==================================================
+  趋势波段主图  （类型：技术指标公式 → 主图叠加）
+  作用：均线系统 + 趋势线变色 + 20日压力/支撑 + 买卖点标记
+  说明：无未来函数，信号出现后不会消失
+==================================================}
+
+{---- 均线系统 ----}
+MA5:MA(C,5),COLORWHITE;
+MA10:MA(C,10),COLORYELLOW;
+MA20:MA(C,20),COLORMAGENTA;
+MA60:MA(C,60),COLORGREEN;
+
+{---- 趋势线：向上红色，向下绿色 ----}
+TR:=EMA(EMA(C,10),10);
+趋势多:IF(TR>=REF(TR,1),TR,DRAWNULL),COLORRED,LINETHICK2;
+趋势空:IF(TR<REF(TR,1),TR,DRAWNULL),COLORGREEN,LINETHICK2;
+
+{---- 前20日压力位 / 支撑位（不含当天）----}
+压力:REF(HHV(H,20),1),DOTLINE,COLORCYAN;
+支撑:REF(LLV(L,20),1),DOTLINE,COLORBROWN;
+
+{---- 买点1：放量突破 20 日高点 ----}
+突破:=C>压力 AND V>MA(V,5)*1.5 AND C>O AND TR>=REF(TR,1);
+DRAWICON(FILTER(突破,5),L*0.98,1);
+DRAWTEXT(FILTER(突破,5),L*0.96,'突破'),COLORRED;
+
+{---- 买点2：上升趋势中缩量回踩 20 日线 ----}
+回踩:=MA20>REF(MA20,1) AND MA10>MA20 AND L<=MA20*1.01 AND C>MA20 AND V<MA(V,5);
+DRAWTEXT(FILTER(回踩,5),L*0.97,'回踩'),COLORYELLOW;
+
+{---- 卖点：趋势线拐头向下 或 放量跌破 20 日线 ----}
+拐头:=TR<REF(TR,1) AND REF(TR,1)>=REF(TR,2);
+破位:=CROSS(MA20,C) AND V>MA(V,5);
+DRAWICON(FILTER(拐头 OR 破位,5),H*1.02,2);
+DRAWTEXT(FILTER(拐头 OR 破位,5),H*1.04,'离场'),COLORGREEN;
